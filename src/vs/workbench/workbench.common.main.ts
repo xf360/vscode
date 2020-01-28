@@ -269,4 +269,7 @@ import 'vs/workbench/contrib/codeActions/common/codeActions.contribution';
 // Timeline
 import 'vs/workbench/contrib/timeline/browser/timeline.contribution';
 
+// Custom Text Editor
+import 'vs/workbench/contrib/customTextEditor/browser/customTextEditor.contribution';
+
 //#endregion
