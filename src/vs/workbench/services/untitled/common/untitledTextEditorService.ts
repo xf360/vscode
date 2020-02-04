@@ -5,7 +5,7 @@
 
 import { URI } from 'vs/base/common/uri';
 import { createDecorator, IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { UntitledTextEditorInput } from 'vs/workbench/common/editor/untitledTextEditorInput';
+import { UntitledTextEditorInput, BaseUntitledTextEditorInput } from 'vs/workbench/common/editor/untitledTextEditorInput';
 import { IFilesConfiguration } from 'vs/platform/files/common/files';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { Event, Emitter } from 'vs/base/common/event';
@@ -90,6 +90,8 @@ export interface IUntitledTextEditorModelManager {
 	 */
 	exists(resource: URI): boolean;
 
+	add(input: BaseUntitledTextEditorInput): void;
+
 	/**
 	 * Returns an existing untitled input if already created before.
 	 */
@@ -148,6 +150,10 @@ export class UntitledTextEditorService extends Disposable implements IUntitledTe
 		@IConfigurationService private readonly configurationService: IConfigurationService
 	) {
 		super();
+	}
+
+	add(input: BaseUntitledTextEditorInput): void {
+		this.mapResourceToInput.set(input.getResource(), input); // TODO@Ben hack until untitled models can be created without inputs
 	}
 
 	exists(resource: URI): boolean {

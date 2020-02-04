@@ -8,18 +8,16 @@ import { Dimension, addDisposableListener } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { EditorOptions, EditorInput } from 'vs/workbench/common/editor';
+import { EditorOptions, EditorInput, ITextEditorModel } from 'vs/workbench/common/editor';
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { CustomTextEditorInput } from 'vs/workbench/contrib/customTextEditor/browser/customTextEditorInput';
-import { CustomTextEditorModel } from 'vs/workbench/contrib/customTextEditor/browser/customTextEditorModel';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
+import { DisposableStore } from 'vs/base/common/lifecycle';
 
 export class CustomTextEditor extends BaseEditor {
 
 	static ID = 'customTextEditor';
 
 	private textArea: HTMLTextAreaElement | undefined = undefined;
-	private contentListener: IDisposable | undefined = undefined;
+	private inputDisposables: DisposableStore = this._register(new DisposableStore());
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -39,22 +37,44 @@ export class CustomTextEditor extends BaseEditor {
 
 	layout(dimension: Dimension): void { }
 
+	focus(): void {
+		this.textArea?.focus();
+	}
+
 	async setInput(input: EditorInput, options: EditorOptions, token: CancellationToken): Promise<void> {
 		await super.setInput(input, options, token);
 
-		if (input instanceof CustomTextEditorInput && this.textArea) {
-			const model = await input.resolve();
-			if (model instanceof CustomTextEditorModel) {
-				this.textArea.textContent = model.content || '';
-				this.contentListener = addDisposableListener(this.textArea, 'keyup', () => {
-					model.setValue(this.textArea?.value || '');
-				});
-			}
+		// Clear any disposables associated with input
+		this.inputDisposables.clear();
+
+		// Resolve text model to work with
+		const textModel = (await input.resolve() as ITextEditorModel).textEditorModel;
+		const textArea = this.textArea;
+		if (textModel && textArea) {
+
+			// Set initial editor value from given model
+			textArea.value = textModel.getValue() || '';
+
+			// Update model value based on changes in <textarea>
+			this.inputDisposables.add(addDisposableListener(textArea, 'keyup', () => {
+				const newValue = textArea.value || '';
+				if (newValue !== textModel.getValue()) {
+					textModel.setValue(newValue);
+				}
+			}));
+
+			// Update text area based on changes in model
+			this.inputDisposables.add(textModel.onDidChangeContent(() => {
+				const newValue = textModel.getValue() || '';
+				if (newValue !== textArea.value) {
+					textArea.value = newValue;
+				}
+			}));
 		}
 	}
 
 	clearInput(): void {
 		super.clearInput();
-		this.contentListener = dispose(this.contentListener);
+		this.inputDisposables.clear();
 	}
 }

@@ -16,12 +16,7 @@ import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editor
 import { IFileService } from 'vs/platform/files/common/files';
 import { IFilesConfigurationService } from 'vs/workbench/services/filesConfiguration/common/filesConfigurationService';
 
-/**
- * An editor input to be used for untitled text buffers.
- */
-export class UntitledTextEditorInput extends TextResourceEditorInput implements IEncodingSupport, IModeSupport {
-
-	static readonly ID: string = 'workbench.editors.untitledEditorInput';
+export abstract class BaseUntitledTextEditorInput extends TextResourceEditorInput implements IEncodingSupport, IModeSupport {
 
 	private readonly _onDidModelChangeEncoding = this._register(new Emitter<void>());
 	readonly onDidModelChangeEncoding = this._onDidModelChangeEncoding.event;
@@ -55,10 +50,6 @@ export class UntitledTextEditorInput extends TextResourceEditorInput implements 
 
 	get hasAssociatedFilePath(): boolean {
 		return this._hasAssociatedFilePath;
-	}
-
-	getTypeId(): string {
-		return UntitledTextEditorInput.ID;
 	}
 
 	getName(): string {
@@ -200,6 +191,25 @@ export class UntitledTextEditorInput extends TextResourceEditorInput implements 
 		this._register(model.onDispose(() => this.dispose()));
 	}
 
+	dispose(): void {
+		this.cachedModel = undefined;
+		this.modelResolve = undefined;
+
+		super.dispose();
+	}
+}
+
+/**
+ * An editor input to be used for untitled text buffers.
+ */
+export class UntitledTextEditorInput extends BaseUntitledTextEditorInput {
+
+	static readonly ID: string = 'workbench.editors.untitledEditorInput';
+
+	getTypeId(): string {
+		return UntitledTextEditorInput.ID;
+	}
+
 	matches(otherInput: unknown): boolean {
 		if (super.matches(otherInput) === true) {
 			return true;
@@ -211,12 +221,5 @@ export class UntitledTextEditorInput extends TextResourceEditorInput implements 
 		}
 
 		return false;
-	}
-
-	dispose(): void {
-		this.cachedModel = undefined;
-		this.modelResolve = undefined;
-
-		super.dispose();
 	}
 }
