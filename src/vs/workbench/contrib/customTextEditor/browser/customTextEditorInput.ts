@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TextEditorInput } from 'vs/workbench/common/editor';
+import { TextResourceEditorInput } from 'vs/workbench/common/editor';
 import { IEditorModel } from 'vs/platform/editor/common/editor';
 import { URI } from 'vs/base/common/uri';
 import { CustomTextEditorModel } from 'vs/workbench/contrib/customTextEditor/browser/customTextEditorModel';
@@ -13,20 +13,22 @@ import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editor
 import { ITextFileService, ModelState } from 'vs/workbench/services/textfile/common/textfiles';
 import { IFileService, FileSystemProviderCapabilities } from 'vs/platform/files/common/files';
 import { IFilesConfigurationService, AutoSaveMode } from 'vs/workbench/services/filesConfiguration/common/filesConfigurationService';
+import { ILabelService } from 'vs/platform/label/common/label';
 
-export class CustomTextEditorInput extends TextEditorInput {
+export class CustomTextEditorInput extends TextResourceEditorInput {
 
 	constructor(
 		public readonly resource: URI,
 		private readonly asUntitled: boolean,
-		@IFileService private readonly fileService: IFileService,
+		@IFileService fileService: IFileService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IEditorService protected readonly editorService: IEditorService,
 		@IEditorGroupsService protected readonly editorGroupService: IEditorGroupsService,
 		@ITextFileService protected readonly textFileService: ITextFileService,
-		@IFilesConfigurationService private readonly filesConfigurationService: IFilesConfigurationService
+		@IFilesConfigurationService filesConfigurationService: IFilesConfigurationService,
+		@ILabelService labelService: ILabelService
 	) {
-		super(resource, editorService, editorGroupService, textFileService);
+		super(resource, editorService, editorGroupService, textFileService, labelService, fileService, filesConfigurationService);
 
 		this.registerListeners();
 	}
