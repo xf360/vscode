@@ -627,6 +627,10 @@ export class TestPanelService implements IPanelService {
 		return undefined;
 	}
 
+	async openPanelAsync(id?: string, focus?: boolean): Promise<undefined> {
+		return undefined;
+	}
+
 	getPanel(id: string): any {
 		return activeViewlet;
 	}
@@ -1083,8 +1087,14 @@ export class TestFileService implements IFileService {
 		});
 	}
 
+	writeShouldThrowError: Error | undefined = undefined;
+
 	async writeFile(resource: URI, bufferOrReadable: VSBuffer | VSBufferReadable, options?: IWriteFileOptions): Promise<IFileStatWithMetadata> {
 		await timeout(0);
+
+		if (this.writeShouldThrowError) {
+			throw this.writeShouldThrowError;
+		}
 
 		return ({
 			resource,
@@ -1404,7 +1414,6 @@ export class TestElectronService implements IElectronService {
 	async maximizeWindow(): Promise<void> { }
 	async unmaximizeWindow(): Promise<void> { }
 	async minimizeWindow(): Promise<void> { }
-	async isWindowFocused(): Promise<boolean> { return true; }
 	async focusWindow(options?: { windowId?: number | undefined; } | undefined): Promise<void> { }
 	async showMessageBox(options: Electron.MessageBoxOptions): Promise<Electron.MessageBoxReturnValue> { throw new Error('Method not implemented.'); }
 	async showSaveDialog(options: Electron.SaveDialogOptions): Promise<Electron.SaveDialogReturnValue> { throw new Error('Method not implemented.'); }

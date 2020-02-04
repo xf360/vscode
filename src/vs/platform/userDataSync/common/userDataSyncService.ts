@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IUserDataSyncService, SyncStatus, ISynchroniser, IUserDataSyncStoreService, SyncSource, ISettingsSyncService, IUserDataSyncLogService, IUserDataAuthTokenService, IUserDataSynchroniser } from 'vs/platform/userDataSync/common/userDataSync';
+import { IUserDataSyncService, SyncStatus, ISynchroniser, IUserDataSyncStoreService, SyncSource, ISettingsSyncService, IUserDataSyncLogService, IUserDataAuthTokenService, IUserDataSynchroniser, UserDataSyncStoreError } from 'vs/platform/userDataSync/common/userDataSync';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { SettingsSynchroniser } from 'vs/platform/userDataSync/common/settingsSync';
@@ -114,18 +114,21 @@ export class UserDataSyncService extends Disposable implements IUserDataSyncServ
 					break;
 				}
 			} catch (e) {
+				if (e instanceof UserDataSyncStoreError) {
+					throw e;
+				}
 				this.logService.error(`${this.getSyncSource(synchroniser)}: ${toErrorMessage(e)}`);
 			}
 		}
 		this.logService.trace(`Finished Syncing. Took ${new Date().getTime() - startTime}ms`);
 	}
 
-	async resolveConflictsAndContinueSync(content: string): Promise<void> {
+	async resolveConflictsAndContinueSync(content: string, remote: boolean): Promise<void> {
 		const synchroniser = this.getSynchroniserInConflicts();
 		if (!synchroniser) {
 			throw new Error(localize('no synchroniser with conflicts', "No conflicts detected."));
 		}
-		await synchroniser.resolveConflicts(content);
+		await synchroniser.resolveConflicts(content, remote);
 		if (synchroniser.status !== SyncStatus.HasConflicts) {
 			await this.sync();
 		}

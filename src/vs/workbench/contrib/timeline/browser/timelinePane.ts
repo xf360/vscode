@@ -159,6 +159,12 @@ export class TimelinePane extends ViewPane {
 			return;
 		}
 
+		// Fallback to match on fsPath if we are dealing with files or git schemes
+		if (uri?.fsPath === this._uri?.fsPath && (uri?.scheme === 'file' || uri?.scheme === 'git') && (this._uri?.scheme === 'file' || this._uri?.scheme === 'git')) {
+			return;
+		}
+
+
 		this._uri = uri;
 		this.refresh();
 	}
@@ -188,7 +194,7 @@ export class TimelinePane extends ViewPane {
 
 	protected renderBody(container: HTMLElement): void {
 		this._container = container;
-		DOM.addClass(container, 'tree-explorer-viewlet-tree-view');
+		DOM.addClasses(container, 'tree-explorer-viewlet-tree-view', 'timeline-tree-view');
 
 		this._messageElement = DOM.append(this._container, DOM.$('.message'));
 		DOM.addClass(this._messageElement, 'timeline-subtle');
@@ -196,9 +202,7 @@ export class TimelinePane extends ViewPane {
 		this.message = 'The active editor cannot provide timeline information.';
 
 		this._treeElement = document.createElement('div');
-		DOM.addClass(this._treeElement, 'customview-tree');
-		DOM.addClass(this._treeElement, 'file-icon-themable-tree');
-		DOM.addClass(this._treeElement, 'hide-arrows');
+		DOM.addClasses(this._treeElement, 'customview-tree', 'file-icon-themable-tree', 'hide-arrows');
 		// DOM.addClass(this._treeElement, 'show-file-icons');
 		container.appendChild(this._treeElement);
 

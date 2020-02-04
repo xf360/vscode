@@ -74,7 +74,7 @@ export interface IEditorOptions {
 	 * If it is a function, it will be invoked when rendering a line number and the return value will be rendered.
 	 * Otherwise, if it is a truey, line numbers will be rendered normally (equivalent of using an identity function).
 	 * Otherwise, line numbers will not be rendered.
-	 * Defaults to true.
+	 * Defaults to `on`.
 	 */
 	lineNumbers?: LineNumbersType;
 	/**
@@ -267,10 +267,10 @@ export interface IEditorOptions {
 	 */
 	wrappingIndent?: 'none' | 'same' | 'indent' | 'deepIndent';
 	/**
-	 * Controls the wrapping algorithm to use.
-	 * Defaults to 'monospace'.
+	 * Controls the wrapping strategy to use.
+	 * Defaults to 'simple'.
 	 */
-	wrappingAlgorithm?: 'monospace' | 'dom';
+	wrappingStrategy?: 'simple' | 'advanced';
 	/**
 	 * Configure word wrapping characters. A break will be introduced before these characters.
 	 * Defaults to '([{‘“〈《「『【〔（［｛｢£¥＄￡￥+＋'.
@@ -385,8 +385,8 @@ export interface IEditorOptions {
 	 */
 	autoSurround?: EditorAutoSurroundStrategy;
 	/**
-	 * Enable auto indentation adjustment.
-	 * Defaults to false.
+	 * Controls whether the editor should automatically adjust the indentation when users type, paste, move or indent lines.
+	 * Defaults to advanced.
 	 */
 	autoIndent?: 'none' | 'keep' | 'brackets' | 'advanced' | 'full';
 	/**
@@ -555,6 +555,11 @@ export interface IEditorOptions {
 	 * Defaults to false.
 	 */
 	peekWidgetDefaultFocus?: 'tree' | 'editor';
+	/**
+	 * Controls whether the definition link opens element in the peek widget.
+	 * Defaults to false.
+	 */
+	definitionLinkOpensInPeek?: boolean;
 }
 
 export interface IEditorConstructionOptions extends IEditorOptions {
@@ -2751,7 +2756,7 @@ class EditorSuggest extends BaseEditorOption<EditorOption.suggest, InternalSugge
 				'editor.suggest.snippetsPreventQuickSuggestions': {
 					type: 'boolean',
 					default: defaults.snippetsPreventQuickSuggestions,
-					description: nls.localize('suggest.snippetsPreventQuickSuggestions', "Control whether an active snippet prevents quick suggestions.")
+					description: nls.localize('suggest.snippetsPreventQuickSuggestions', "Controls whether an active snippet prevents quick suggestions.")
 				},
 				'editor.suggest.showIcons': {
 					type: 'boolean',
@@ -3192,6 +3197,7 @@ export const enum EditorOption {
 	overviewRulerLanes,
 	parameterHints,
 	peekWidgetDefaultFocus,
+	definitionLinkOpensInPeek,
 	quickSuggestions,
 	quickSuggestionsDelay,
 	readOnly,
@@ -3230,7 +3236,7 @@ export const enum EditorOption {
 	wordWrapColumn,
 	wordWrapMinified,
 	wrappingIndent,
-	wrappingAlgorithm,
+	wrappingStrategy,
 
 	// Leave these at the end (because they have dependencies!)
 	editorClassName,
@@ -3440,7 +3446,13 @@ export const EditorOptions = {
 		EditorOption.foldingStrategy, 'foldingStrategy',
 		'auto' as 'auto' | 'indentation',
 		['auto', 'indentation'] as const,
-		{ markdownDescription: nls.localize('foldingStrategy', "Controls the strategy for computing folding ranges. `auto` uses a language specific folding strategy, if available. `indentation` uses the indentation based folding strategy.") }
+		{
+			enumDescriptions: [
+				nls.localize('foldingStrategy.auto', "Use a language-specific folding strategy if available, else the indentation-based one."),
+				nls.localize('foldingStrategy.indentation', "Use the indentation-based folding strategy."),
+			],
+			description: nls.localize('foldingStrategy', "Controls the strategy for computing folding ranges.")
+		}
 	)),
 	foldingHighlight: register(new EditorBooleanOption(
 		EditorOption.foldingHighlight, 'foldingHighlight', true,
@@ -3577,11 +3589,15 @@ export const EditorOptions = {
 		['tree', 'editor'] as const,
 		{
 			enumDescriptions: [
-				nls.localize('peekWidgetDefaultFocus.tree', "Focus the tree when openeing peek"),
+				nls.localize('peekWidgetDefaultFocus.tree', "Focus the tree when opening peek"),
 				nls.localize('peekWidgetDefaultFocus.editor', "Focus the editor when opening peek")
 			],
 			description: nls.localize('peekWidgetDefaultFocus', "Controls whether to focus the inline editor or the tree in the peek widget.")
 		}
+	)),
+	definitionLinkOpensInPeek: register(new EditorBooleanOption(
+		EditorOption.definitionLinkOpensInPeek, 'definitionLinkOpensInPeek', false,
+		{ description: nls.localize('definitionLinkOpensInPeek', "Controls whether the definition link opens element in the peek widget.") }
 	)),
 	quickSuggestions: register(new EditorQuickSuggestions()),
 	quickSuggestionsDelay: register(new EditorIntOption(
@@ -3675,7 +3691,13 @@ export const EditorOptions = {
 		EditorOption.showFoldingControls, 'showFoldingControls',
 		'mouseover' as 'always' | 'mouseover',
 		['always', 'mouseover'] as const,
-		{ description: nls.localize('showFoldingControls', "Controls whether the fold controls on the gutter are automatically hidden.") }
+		{
+			enumDescriptions: [
+				nls.localize('showFoldingControls.always', "Always show the folding controls."),
+				nls.localize('showFoldingControls.mouseover', "Only show the folding controls when the mouse is over the gutter."),
+			],
+			description: nls.localize('showFoldingControls', "Controls when the folding controls on the gutter are shown.")
+		}
 	)),
 	showUnused: register(new EditorBooleanOption(
 		EditorOption.showUnused, 'showUnused', true,
@@ -3822,16 +3844,16 @@ export const EditorOptions = {
 			description: nls.localize('wrappingIndent', "Controls the indentation of wrapped lines."),
 		}
 	)),
-	wrappingAlgorithm: register(new EditorStringEnumOption(
-		EditorOption.wrappingAlgorithm, 'wrappingAlgorithm',
-		'monospace' as 'monospace' | 'dom',
-		['monospace', 'dom'] as const,
+	wrappingStrategy: register(new EditorStringEnumOption(
+		EditorOption.wrappingStrategy, 'wrappingStrategy',
+		'simple' as 'simple' | 'advanced',
+		['simple', 'advanced'] as const,
 		{
 			enumDescriptions: [
-				nls.localize('wrappingAlgorithm.monospace', "Assumes that all characters are of the same width. This is a fast algorithm."),
-				nls.localize('wrappingAlgorithm.dom', "Delegates wrapping points computation to the DOM. This is a slow algorithm, that might cause freezes for large files.")
+				nls.localize('wrappingStrategy.simple', "Assumes that all characters are of the same width. This is a fast algorithm that works correctly for monospace fonts and certain scripts (like Latin characters) where glyphs are of equal width."),
+				nls.localize('wrappingStrategy.advanced', "Delegates wrapping points computation to the browser. This is a slow algorithm, that might cause freezes for large files, but it works correctly in all cases.")
 			],
-			description: nls.localize('wrappingAlgorithm', "Controls the algorithm that computes wrapping points.")
+			description: nls.localize('wrappingStrategy', "Controls the algorithm that computes wrapping points.")
 		}
 	)),
 
