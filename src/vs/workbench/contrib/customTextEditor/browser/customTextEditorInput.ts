@@ -18,10 +18,6 @@ export class CustomTextFileEditorInput extends BaseFileEditorInput {
 		return 'customTextFileEditorInput';
 	}
 
-	getPreferredEditorId(candidates: string[]): string {
-		return 'customTextEditor';
-	}
-
 	matches(otherInput: unknown): boolean {
 		if (super.matches(otherInput) === true) {
 			return true;
@@ -43,10 +39,6 @@ export class CustomUntitledTextEditorInput extends BaseUntitledTextEditorInput {
 
 	getName(): string {
 		return `[custom text editor] ${super.getName()}`;
-	}
-
-	getPreferredEditorId(candidates: string[]): string {
-		return 'customTextEditor';
 	}
 
 	async resolve(): Promise<UntitledTextEditorModel & IResolvedTextEditorModel> {
