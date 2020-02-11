@@ -18,6 +18,7 @@ import { IEditorService } from 'vs/workbench/services/editor/common/editorServic
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { URI } from 'vs/base/common/uri';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
+import { Event } from 'vs/base/common/event';
 
 // Register file editors
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
@@ -61,7 +62,35 @@ export class OpenUntitledCustomTextEditorAction extends Action {
 	}
 
 	run(): any {
-		return this.editorService.openEditor(this.instantiationService.createInstance(CustomUntitledTextEditorInput, this.textFileService.untitled.create()));
+		const model = this.textFileService.untitled.create();
+
+		const input = this.instantiationService.createInstance(CustomUntitledTextEditorInput, model);
+		Event.once(input.onDispose)(() => model.dispose());
+
+		return this.editorService.openEditor(this.instantiationService.createInstance(CustomUntitledTextEditorInput, model));
+	}
+}
+
+export class OpenUntitledCustomTextEditorWithInitialTextAction extends Action {
+
+	constructor(
+		id: string,
+		label: string,
+		@IEditorService private readonly editorService: IEditorService,
+		@ITextFileService private readonly textFileService: ITextFileService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService
+	) {
+		super('openCustomTextEditor', 'Open Untitled Custom Text Editor With Initial Text', undefined, true);
+	}
+
+	async run(): Promise<any> {
+		const model = await this.textFileService.untitled.create().load();
+		model.setValue('Initial Contents', true);
+
+		const input = this.instantiationService.createInstance(CustomUntitledTextEditorInput, model);
+		Event.once(input.onDispose)(() => model.dispose());
+
+		return this.editorService.openEditor(input);
 	}
 }
 
@@ -74,6 +103,11 @@ registry.registerWorkbenchAction(
 registry.registerWorkbenchAction(
 	SyncActionDescriptor.create(OpenUntitledCustomTextEditorAction, 'openUntitledCustomTextEditor', 'Open Untitled Custom Text Editor'),
 	'Open Untitled Custom Text Editor'
+);
+
+registry.registerWorkbenchAction(
+	SyncActionDescriptor.create(OpenUntitledCustomTextEditorWithInitialTextAction, 'openUntitledCustomTextEditorWithInitialText', 'Open Untitled Custom Text Editor With Initial Text'),
+	'Open Untitled Custom Text Editor With Initial Text'
 );
 
 class CustomTextEditorInputFactory implements IEditorInputFactory {
