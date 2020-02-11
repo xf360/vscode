@@ -17,7 +17,7 @@ import { Action } from 'vs/base/common/actions';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { URI } from 'vs/base/common/uri';
-import { Schemas } from 'vs/base/common/network';
+import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 
 // Register file editors
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
@@ -54,13 +54,14 @@ export class OpenUntitledCustomTextEditorAction extends Action {
 		id: string,
 		label: string,
 		@IEditorService private readonly editorService: IEditorService,
+		@ITextFileService private readonly textFileService: ITextFileService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService
 	) {
 		super('openCustomTextEditor', 'Open Untitled Custom Text Editor', undefined, true);
 	}
 
 	run(): any {
-		return this.editorService.openEditor(this.instantiationService.createInstance(CustomUntitledTextEditorInput, URI.from({ scheme: Schemas.untitled, path: `Untitled-${Date.now()}` }), false, undefined, undefined, undefined));
+		return this.editorService.openEditor(this.instantiationService.createInstance(CustomUntitledTextEditorInput, this.textFileService.untitled.create()));
 	}
 }
 
@@ -99,7 +100,9 @@ class CustomTextEditorInputFactory implements IEditorInputFactory {
 			return instantiationService.createInstance(CustomTextFileEditorInput, resource, undefined, undefined);
 		}
 
-		return instantiationService.createInstance(CustomUntitledTextEditorInput, resource, false, undefined, undefined, undefined);
+		return instantiationService.invokeFunction(accessor => {
+			return instantiationService.createInstance(CustomUntitledTextEditorInput, accessor.get(ITextFileService).untitled.create({ untitledResource: resource }));
+		});
 	}
 }
 

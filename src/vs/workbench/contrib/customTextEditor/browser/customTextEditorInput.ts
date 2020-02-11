@@ -4,9 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BaseFileEditorInput } from 'vs/workbench/contrib/files/common/editors/fileEditorInput';
-import { BaseUntitledTextEditorInput } from 'vs/workbench/common/editor/untitledTextEditorInput';
-import { UntitledTextEditorModel } from 'vs/workbench/common/editor/untitledTextEditorModel';
-import { IResolvedTextEditorModel } from 'vs/editor/common/services/resolverService';
+import { BaseUntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
 
 export class CustomTextFileEditorInput extends BaseFileEditorInput {
 
@@ -39,14 +37,6 @@ export class CustomUntitledTextEditorInput extends BaseUntitledTextEditorInput {
 
 	getName(): string {
 		return `[custom text editor] ${super.getName()}`;
-	}
-
-	async resolve(): Promise<UntitledTextEditorModel & IResolvedTextEditorModel> {
-		const model = await super.resolve();
-
-		this.textFileService.untitled.add(this);
-
-		return model;
 	}
 
 	matches(otherInput: unknown): boolean {
