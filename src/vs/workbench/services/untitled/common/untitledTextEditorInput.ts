@@ -5,7 +5,6 @@
 
 import { IEncodingSupport, EncodingMode, Verbosity, IModeSupport, TextResourceEditorInput } from 'vs/workbench/common/editor';
 import { IUntitledTextEditorModel } from 'vs/workbench/services/untitled/common/untitledTextEditorModel';
-import { Emitter } from 'vs/base/common/event';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { ILabelService } from 'vs/platform/label/common/label';
 import { IResolvedTextEditorModel } from 'vs/editor/common/services/resolverService';
@@ -15,9 +14,6 @@ import { IFileService } from 'vs/platform/files/common/files';
 import { IFilesConfigurationService } from 'vs/workbench/services/filesConfiguration/common/filesConfigurationService';
 
 export abstract class BaseUntitledTextEditorInput extends TextResourceEditorInput implements IEncodingSupport, IModeSupport {
-
-	private readonly _onDidModelChangeEncoding = this._register(new Emitter<void>());
-	readonly onDidModelChangeEncoding = this._onDidModelChangeEncoding.event;
 
 	private modelResolve: Promise<IUntitledTextEditorModel & IResolvedTextEditorModel> | undefined = undefined;
 
@@ -39,7 +35,6 @@ export abstract class BaseUntitledTextEditorInput extends TextResourceEditorInpu
 
 		// re-emit some events from the model
 		this._register(model.onDidChangeDirty(() => this._onDidChangeDirty.fire()));
-		this._register(model.onDidChangeEncoding(() => this._onDidModelChangeEncoding.fire()));
 		this._register(model.onDidChangeName(() => this._onDidChangeLabel.fire()));
 
 		// a reverted untitled text editor model renders this input disposed

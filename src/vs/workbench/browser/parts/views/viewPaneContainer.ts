@@ -7,10 +7,10 @@ import 'vs/css!./media/paneviewlet';
 import * as nls from 'vs/nls';
 import { Event, Emitter } from 'vs/base/common/event';
 import { ColorIdentifier } from 'vs/platform/theme/common/colorRegistry';
-import { attachStyler, IColorMapping } from 'vs/platform/theme/common/styler';
+import { attachStyler, IColorMapping, attachButtonStyler, attachLinkStyler } from 'vs/platform/theme/common/styler';
 import { SIDE_BAR_DRAG_AND_DROP_BACKGROUND, SIDE_BAR_SECTION_HEADER_FOREGROUND, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_SECTION_HEADER_BORDER, PANEL_BACKGROUND, SIDE_BAR_BACKGROUND } from 'vs/workbench/common/theme';
-import { append, $, trackFocus, toggleClass, EventType, isAncestor, Dimension, addDisposableListener } from 'vs/base/browser/dom';
-import { IDisposable, combinedDisposable, dispose, toDisposable } from 'vs/base/common/lifecycle';
+import { append, $, trackFocus, toggleClass, EventType, isAncestor, Dimension, addDisposableListener, removeClass, addClass } from 'vs/base/browser/dom';
+import { IDisposable, combinedDisposable, dispose, toDisposable, Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { firstIndex } from 'vs/base/common/arrays';
 import { IAction, IActionRunner, ActionRunner } from 'vs/base/common/actions';
 import { IActionViewItem, ActionsOrientation, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
@@ -25,7 +25,7 @@ import { PaneView, IPaneViewOptions, IPaneOptions, Pane, DefaultPaneDndControlle
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
-import { Extensions as ViewContainerExtensions, IView, FocusedViewContext, IViewContainersRegistry, IViewDescriptor, ViewContainer, IViewDescriptorService, ViewContainerLocation, IViewPaneContainer } from 'vs/workbench/common/views';
+import { Extensions as ViewContainerExtensions, IView, FocusedViewContext, IViewContainersRegistry, IViewDescriptor, ViewContainer, IViewDescriptorService, ViewContainerLocation, IViewPaneContainer, IViewsRegistry, IViewContentDescriptor } from 'vs/workbench/common/views';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { assertIsDefined } from 'vs/base/common/types';
@@ -38,6 +38,10 @@ import { Component } from 'vs/workbench/common/component';
 import { MenuId, MenuItemAction } from 'vs/platform/actions/common/actions';
 import { ContextAwareMenuEntryActionViewItem } from 'vs/platform/actions/browser/menuEntryActionViewItem';
 import { ViewMenuActions } from 'vs/workbench/browser/parts/views/viewMenuActions';
+import { parseLinkedText } from 'vs/base/common/linkedText';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { Button } from 'vs/base/browser/ui/button/button';
+import { Link } from 'vs/platform/opener/browser/link';
 
 export interface IPaneColors extends IColorMapping {
 	dropBackground?: ColorIdentifier;
@@ -52,6 +56,90 @@ export interface IViewPaneOptions extends IPaneOptions {
 	title: string;
 	showActionsAlways?: boolean;
 	titleMenuId?: MenuId;
+}
+
+const viewsRegistry = Registry.as<IViewsRegistry>(ViewContainerExtensions.ViewsRegistry);
+
+interface IItem {
+	readonly descriptor: IViewContentDescriptor;
+	visible: boolean;
+}
+
+class ViewWelcomeController {
+
+	private _onDidChange = new Emitter<void>();
+	readonly onDidChange = this._onDidChange.event;
+
+	private defaultItem: IItem | undefined;
+	private items: IItem[] = [];
+	get contents(): IViewContentDescriptor[] {
+		const visibleItems = this.items.filter(v => v.visible);
+
+		if (visibleItems.length === 0 && this.defaultItem) {
+			return [this.defaultItem.descriptor];
+		}
+
+		return visibleItems.map(v => v.descriptor);
+	}
+
+	private contextKeyService: IContextKeyService;
+	private disposables = new DisposableStore();
+
+	constructor(
+		private id: string,
+		@IContextKeyService contextKeyService: IContextKeyService,
+	) {
+		this.contextKeyService = contextKeyService.createScoped();
+		this.disposables.add(this.contextKeyService);
+
+		contextKeyService.onDidChangeContext(this.onDidChangeContext, this, this.disposables);
+		Event.filter(viewsRegistry.onDidChangeViewWelcomeContent, id => id === this.id)(this.onDidChangeViewWelcomeContent, this, this.disposables);
+		this.onDidChangeViewWelcomeContent();
+	}
+
+	private onDidChangeViewWelcomeContent(): void {
+		const descriptors = viewsRegistry.getViewWelcomeContent(this.id);
+
+		this.items = [];
+
+		for (const descriptor of descriptors) {
+			if (descriptor.when === 'default') {
+				this.defaultItem = { descriptor, visible: true };
+			} else {
+				const visible = descriptor.when ? this.contextKeyService.contextMatchesRules(descriptor.when) : true;
+				this.items.push({ descriptor, visible });
+			}
+		}
+
+		this._onDidChange.fire();
+	}
+
+	private onDidChangeContext(): void {
+		let didChange = false;
+
+		for (const item of this.items) {
+			if (!item.descriptor.when || item.descriptor.when === 'default') {
+				continue;
+			}
+
+			const visible = this.contextKeyService.contextMatchesRules(item.descriptor.when);
+
+			if (item.visible === visible) {
+				continue;
+			}
+
+			item.visible = visible;
+			didChange = true;
+		}
+
+		if (didChange) {
+			this._onDidChange.fire();
+		}
+	}
+
+	dispose(): void {
+		this.disposables.dispose();
+	}
 }
 
 export abstract class ViewPane extends Pane implements IView {
@@ -70,6 +158,9 @@ export abstract class ViewPane extends Pane implements IView {
 	protected _onDidChangeTitleArea = this._register(new Emitter<void>());
 	readonly onDidChangeTitleArea: Event<void> = this._onDidChangeTitleArea.event;
 
+	protected _onDidChangeViewWelcomeState = this._register(new Emitter<void>());
+	readonly onDidChangeViewWelcomeState: Event<void> = this._onDidChangeViewWelcomeState.event;
+
 	private focusedViewContextKey: IContextKey<string>;
 
 	private _isVisible: boolean = false;
@@ -79,11 +170,16 @@ export abstract class ViewPane extends Pane implements IView {
 	private readonly menuActions: ViewMenuActions;
 
 	protected actionRunner?: IActionRunner;
-	protected toolbar?: ToolBar;
+	private toolbar?: ToolBar;
 	private readonly showActionsAlways: boolean = false;
 	private headerContainer?: HTMLElement;
 	private titleContainer?: HTMLElement;
 	protected twistiesContainer?: HTMLElement;
+
+	private bodyContainer!: HTMLElement;
+	private viewWelcomeContainer!: HTMLElement;
+	private viewWelcomeDisposable: IDisposable = Disposable.None;
+	private viewWelcomeController: ViewWelcomeController;
 
 	constructor(
 		options: IViewPaneOptions,
@@ -93,6 +189,8 @@ export abstract class ViewPane extends Pane implements IView {
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IViewDescriptorService protected viewDescriptorService: IViewDescriptorService,
 		@IInstantiationService protected instantiationService: IInstantiationService,
+		@IOpenerService protected openerService: IOpenerService,
+		@IThemeService protected themeService: IThemeService,
 	) {
 		super(options);
 
@@ -104,6 +202,8 @@ export abstract class ViewPane extends Pane implements IView {
 
 		this.menuActions = this._register(instantiationService.createInstance(ViewMenuActions, this.id, options.titleMenuId || MenuId.ViewTitle, MenuId.ViewTitleContext));
 		this._register(this.menuActions.onDidChangeTitle(() => this.updateActions()));
+
+		this.viewWelcomeController = new ViewWelcomeController(this.id, contextKeyService);
 	}
 
 	setVisible(visible: boolean): void {
@@ -189,6 +289,19 @@ export abstract class ViewPane extends Pane implements IView {
 		this._onDidChangeTitleArea.fire();
 	}
 
+	protected renderBody(container: HTMLElement): void {
+		this.bodyContainer = container;
+		this.viewWelcomeContainer = append(container, $('.welcome-view', { tabIndex: 0 }));
+
+		const onViewWelcomeChange = Event.any(this.viewWelcomeController.onDidChange, this.onDidChangeViewWelcomeState);
+		this._register(onViewWelcomeChange(this.updateViewWelcome, this));
+		this.updateViewWelcome();
+	}
+
+	protected layoutBody(height: number, width: number): void {
+		// noop
+	}
+
 	protected getProgressLocation(): string {
 		return this.viewDescriptorService.getViewContainer(this.id)!.id;
 	}
@@ -253,6 +366,66 @@ export abstract class ViewPane extends Pane implements IView {
 
 	saveState(): void {
 		// Subclasses to implement for saving state
+	}
+
+	private updateViewWelcome(): void {
+		this.viewWelcomeDisposable.dispose();
+
+		if (!this.shouldShowWelcome()) {
+			removeClass(this.bodyContainer, 'welcome');
+			this.viewWelcomeContainer.innerHTML = '';
+			return;
+		}
+
+		const contents = this.viewWelcomeController.contents;
+
+		if (contents.length === 0) {
+			removeClass(this.bodyContainer, 'welcome');
+			this.viewWelcomeContainer.innerHTML = '';
+			return;
+		}
+
+		const disposables = new DisposableStore();
+		addClass(this.bodyContainer, 'welcome');
+		this.viewWelcomeContainer.innerHTML = '';
+
+		for (const { content } of contents) {
+			const lines = content.split('\n');
+
+			for (let line of lines) {
+				line = line.trim();
+
+				if (!line) {
+					continue;
+				}
+
+				const p = append(this.viewWelcomeContainer, $('p'));
+				const linkedText = parseLinkedText(line);
+
+				for (const node of linkedText.nodes) {
+					if (typeof node === 'string') {
+						append(p, document.createTextNode(node));
+					} else if (linkedText.nodes.length === 1) {
+						const button = new Button(p, { title: node.title });
+						button.label = node.label;
+						button.onDidClick(_ => this.openerService.open(node.href), null, disposables);
+						disposables.add(button);
+						disposables.add(attachButtonStyler(button, this.themeService));
+					} else {
+						const link = this.instantiationService.createInstance(Link, node);
+						append(p, link.el);
+						disposables.add(link);
+						disposables.add(attachLinkStyler(link, this.themeService));
+					}
+				}
+			}
+		}
+
+		this.viewWelcomeDisposable = disposables;
+	}
+
+	shouldShowWelcome(): boolean {
+		return false;
 	}
 }
 

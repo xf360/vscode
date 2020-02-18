@@ -118,7 +118,7 @@ class CustomTextEditorInputFactory implements IEditorInputFactory {
 		if (editorInput instanceof CustomTextFileEditorInput || editorInput instanceof CustomUntitledTextEditorInput) {
 			return JSON.stringify({
 				typeId: editorInput.getTypeId(),
-				resource: editorInput.getResource().toString()
+				resource: editorInput.resource.toString()
 			});
 		}
 
