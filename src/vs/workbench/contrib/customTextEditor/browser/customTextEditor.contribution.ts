@@ -19,6 +19,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { URI } from 'vs/base/common/uri';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { Event } from 'vs/base/common/event';
+import { dirname, join } from 'vs/base/common/path';
 
 // Register file editors
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
@@ -45,7 +46,7 @@ export class OpenCustomTextEditorAction extends Action {
 	}
 
 	run(): any {
-		return this.editorService.openEditor(this.instantiationService.createInstance(CustomTextFileEditorInput, URI.parse(__filename), undefined, undefined));
+		return this.editorService.openEditor(this.instantiationService.createInstance(CustomTextFileEditorInput, URI.parse(join(dirname(dirname(dirname(dirname(dirname(dirname(dirname(__filename))))))), 'README.md')), undefined, undefined));
 	}
 }
 

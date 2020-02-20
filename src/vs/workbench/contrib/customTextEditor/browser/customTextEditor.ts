@@ -29,13 +29,20 @@ export class CustomTextEditor extends BaseEditor {
 
 	protected createEditor(parent: HTMLElement): void {
 		this.textArea = document.createElement('textarea');
-		this.textArea.style.width = '100%';
-		this.textArea.style.height = '100%';
+		this.textArea.style.border = '0';
+		this.textArea.style.outline = '0';
+		this.textArea.style.padding = '5px';
+		this.textArea.style.margin = '0';
 
 		parent.appendChild(this.textArea);
 	}
 
-	layout(dimension: Dimension): void { }
+	layout(dimension: Dimension): void {
+		if (this.textArea) {
+			this.textArea.style.width = `${dimension.width - 10}px`;
+			this.textArea.style.height = `${dimension.height - 10}px`;
+		}
+	}
 
 	focus(): void {
 		this.textArea?.focus();
