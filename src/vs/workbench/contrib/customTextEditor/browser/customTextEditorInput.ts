@@ -5,6 +5,8 @@
 
 import { BaseFileEditorInput } from 'vs/workbench/contrib/files/common/editors/fileEditorInput';
 import { BaseUntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
+import { GroupIdentifier, IMoveResult } from 'vs/workbench/common/editor';
+import { URI } from 'vs/base/common/uri';
 
 export class CustomTextFileEditorInput extends BaseFileEditorInput {
 
@@ -14,6 +16,12 @@ export class CustomTextFileEditorInput extends BaseFileEditorInput {
 
 	getTypeId(): string {
 		return 'customTextFileEditorInput';
+	}
+
+	move(group: GroupIdentifier, target: URI): IMoveResult {
+		return {
+			editor: this.instantiationService.createInstance(CustomTextFileEditorInput, target, undefined, undefined)
+		};
 	}
 
 	matches(otherInput: unknown): boolean {

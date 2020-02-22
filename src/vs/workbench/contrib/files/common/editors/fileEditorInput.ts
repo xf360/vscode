@@ -43,7 +43,7 @@ export abstract class BaseFileEditorInput extends TextResourceEditorInput implem
 		resource: URI,
 		preferredEncoding: string | undefined,
 		preferredMode: string | undefined,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService protected readonly instantiationService: IInstantiationService,
 		@ITextFileService textFileService: ITextFileService,
 		@ITextModelService private readonly textModelResolverService: ITextModelService,
 		@ILabelService labelService: ILabelService,
