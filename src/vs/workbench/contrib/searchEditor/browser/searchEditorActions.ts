@@ -17,7 +17,7 @@ import { getSearchView } from 'vs/workbench/contrib/search/browser/searchActions
 import { SearchResult } from 'vs/workbench/contrib/search/common/searchModel';
 import * as Constants from 'vs/workbench/contrib/searchEditor/browser/constants';
 import { SearchEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditor';
-import { getOrMakeSearchEditorInput, SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import { getOrMakeSearchEditorInput, FileSearchEditorInput, UntitledSearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { serializeSearchResultForEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditorSerialization';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { ISearchConfigurationProperties } from 'vs/workbench/services/search/common/search';
@@ -25,7 +25,7 @@ import { ISearchConfigurationProperties } from 'vs/workbench/services/search/com
 export const toggleSearchEditorCaseSensitiveCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (input instanceof UntitledSearchEditorInput || input instanceof FileSearchEditorInput) {
 		(editorService.activeControl as SearchEditor).toggleCaseSensitive();
 	}
 };
@@ -33,7 +33,7 @@ export const toggleSearchEditorCaseSensitiveCommand = (accessor: ServicesAccesso
 export const toggleSearchEditorWholeWordCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (input instanceof UntitledSearchEditorInput || input instanceof FileSearchEditorInput) {
 		(editorService.activeControl as SearchEditor).toggleWholeWords();
 	}
 };
@@ -41,7 +41,7 @@ export const toggleSearchEditorWholeWordCommand = (accessor: ServicesAccessor) =
 export const toggleSearchEditorRegexCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (input instanceof UntitledSearchEditorInput || input instanceof FileSearchEditorInput) {
 		(editorService.activeControl as SearchEditor).toggleRegex();
 	}
 };
@@ -49,7 +49,7 @@ export const toggleSearchEditorRegexCommand = (accessor: ServicesAccessor) => {
 export const toggleSearchEditorContextLinesCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (input instanceof UntitledSearchEditorInput || input instanceof FileSearchEditorInput) {
 		(editorService.activeControl as SearchEditor).toggleContextLines();
 	}
 };
@@ -131,7 +131,7 @@ const openNewSearchEditor =
 			const selection = activeModel?.getSelection();
 			selected = (selection && activeModel?.getModel()?.getValueInRange(selection)) ?? '';
 		} else {
-			if (editorService.activeEditor instanceof SearchEditorInput) {
+			if (editorService.activeEditor instanceof UntitledSearchEditorInput || editorService.activeEditor instanceof FileSearchEditorInput) {
 				const active = editorService.activeControl as SearchEditor;
 				selected = active.getSelected();
 			}

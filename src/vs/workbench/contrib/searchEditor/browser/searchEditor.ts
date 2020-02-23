@@ -36,7 +36,7 @@ import { ITextQueryBuilderOptions, QueryBuilder } from 'vs/workbench/contrib/sea
 import { getOutOfWorkspaceEditorResources } from 'vs/workbench/contrib/search/common/search';
 import { SearchModel } from 'vs/workbench/contrib/search/common/searchModel';
 import { InSearchEditor, SearchEditorFindMatchClass } from 'vs/workbench/contrib/searchEditor/browser/constants';
-import type { SearchConfiguration, SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import type { SearchConfiguration, UntitledSearchEditorInput, FileSearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { extractSearchQuery, serializeSearchConfiguration, serializeSearchResultForEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditorSerialization';
 import { IPatternInfo, ISearchConfigurationProperties, ITextQuery } from 'vs/workbench/services/search/common/search';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
@@ -222,8 +222,6 @@ export class SearchEditor extends BaseTextEditor {
 
 		this._register(this.searchResultEditor.onKeyDown(e => e.keyCode === KeyCode.Escape && this.queryEditorWidget.searchInput.focus()));
 
-		this._register(this.searchResultEditor.onDidChangeModelContent(() => this.getInput()?.setDirty(true)));
-
 		[this.queryEditorWidget.searchInputFocusTracker, this.queryEditorWidget.replaceInputFocusTracker, this.inputPatternExcludes.inputFocusTracker, this.inputPatternIncludes.inputFocusTracker]
 			.map(tracker => {
 				this._register(tracker.onDidFocus(() => setTimeout(() => this.inputFocusContextKey.set(true), 0)));
@@ -395,7 +393,6 @@ export class SearchEditor extends BaseTextEditor {
 		this.modelService.updateModel(body, results.text);
 		header.setValue(serializeSearchConfiguration(config));
 
-		input.setDirty(input.resource.scheme !== 'search-editor');
 		input.setMatchRanges(results.matchRanges);
 	}
 
@@ -421,11 +418,11 @@ export class SearchEditor extends BaseTextEditor {
 		}
 	}
 
-	private getInput(): SearchEditorInput | undefined {
-		return this._input as SearchEditorInput;
+	private getInput(): UntitledSearchEditorInput | FileSearchEditorInput | undefined {
+		return this._input as UntitledSearchEditorInput | FileSearchEditorInput;
 	}
 
-	async setInput(newInput: SearchEditorInput, options: EditorOptions | undefined, token: CancellationToken): Promise<void> {
+	async setInput(newInput: UntitledSearchEditorInput | FileSearchEditorInput, options: EditorOptions | undefined, token: CancellationToken): Promise<void> {
 		this.saveViewState();
 
 		await super.setInput(newInput, options, token);

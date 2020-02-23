@@ -26,7 +26,7 @@ import * as SearchConstants from 'vs/workbench/contrib/search/common/constants';
 import * as SearchEditorConstants from 'vs/workbench/contrib/searchEditor/browser/constants';
 import { SearchEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditor';
 import { OpenResultsInEditorAction, OpenSearchEditorAction, toggleSearchEditorCaseSensitiveCommand, toggleSearchEditorContextLinesCommand, toggleSearchEditorRegexCommand, toggleSearchEditorWholeWordCommand } from 'vs/workbench/contrib/searchEditor/browser/searchEditorActions';
-import { getOrMakeSearchEditorInput, SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import { getOrMakeSearchEditorInput, UntitledSearchEditorInput, FileSearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
@@ -39,7 +39,8 @@ Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 		localize('searchEditor', "Search Editor")
 	),
 	[
-		new SyncDescriptor(SearchEditorInput)
+		new SyncDescriptor(UntitledSearchEditorInput),
+		new SyncDescriptor(FileSearchEditorInput)
 	]
 );
 //#endregion
@@ -85,24 +86,22 @@ class SearchEditorInputFactory implements IEditorInputFactory {
 
 	canSerialize() { return true; }
 
-	serialize(input: SearchEditorInput) {
+	serialize(input: UntitledSearchEditorInput | FileSearchEditorInput) {
 		let resource = undefined;
 		if (input.resource.path || input.resource.fragment) {
 			resource = input.resource.toString();
 		}
 
 		const config = input.getConfigSync();
-		const dirty = input.isDirty();
 		const matchRanges = input.getMatchRanges();
 
-		return JSON.stringify({ resource, dirty, config, name: input.getName(), matchRanges });
+		return JSON.stringify({ resource, config, name: input.getName(), matchRanges });
 	}
 
-	deserialize(instantiationService: IInstantiationService, serializedEditorInput: string): SearchEditorInput | undefined {
-		const { resource, dirty, config, matchRanges } = JSON.parse(serializedEditorInput);
+	deserialize(instantiationService: IInstantiationService, serializedEditorInput: string): UntitledSearchEditorInput | FileSearchEditorInput | undefined {
+		const { resource, config, matchRanges } = JSON.parse(serializedEditorInput);
 		if (config && (config.query !== undefined)) {
 			const input = instantiationService.invokeFunction(getOrMakeSearchEditorInput, { config, uri: URI.parse(resource) });
-			input.setDirty(dirty);
 			input.setMatchRanges(matchRanges);
 			return input;
 		}
@@ -111,7 +110,11 @@ class SearchEditorInputFactory implements IEditorInputFactory {
 }
 
 Registry.as<IEditorInputFactoryRegistry>(EditorInputExtensions.EditorInputFactories).registerEditorInputFactory(
-	SearchEditorInput.ID,
+	UntitledSearchEditorInput.ID,
+	SearchEditorInputFactory);
+
+Registry.as<IEditorInputFactoryRegistry>(EditorInputExtensions.EditorInputFactories).registerEditorInputFactory(
+	FileSearchEditorInput.ID,
 	SearchEditorInputFactory);
 //#endregion
 
