@@ -281,9 +281,22 @@ export const getOrMakeSearchEditorInput = (
 	}
 
 	const getModel = async (input: UntitledSearchEditorInput | FileSearchEditorInput) => {
-		const contents = (await input.resolve() as IResolvedTextEditorModel).textEditorModel.getValue();
+		const textFileModel = (await input.resolve() as IResolvedTextEditorModel);
 
-		const lines = contents.split(/\r?\n/);
+		if (input instanceof UntitledSearchEditorInput) {
+			let initialValue: string | undefined = undefined;
+			if (existingData.text) {
+				initialValue = existingData.text;
+			} else if (existingData.config) {
+				initialValue = serializeSearchConfiguration(existingData.config);
+			}
+
+			if (initialValue) {
+				(textFileModel as IResolvedTextEditorModel & IUntitledTextEditorModel).setValue(initialValue, true);
+			}
+		}
+
+		const lines = textFileModel.textEditorModel.getValue().split(/\r?\n/);
 
 		const headerlines = [];
 		const bodylines = [];
@@ -312,14 +325,7 @@ export const getOrMakeSearchEditorInput = (
 
 	let input: UntitledSearchEditorInput | FileSearchEditorInput;
 	if (!existingData.uri || existingData.uri.scheme === network.Schemas.untitled) {
-		let initialValue: string | undefined = undefined;
-		if (existingData.text) {
-			initialValue = existingData.text;
-		} else if (existingData.config) {
-			initialValue = serializeSearchConfiguration(existingData.config);
-		}
-
-		const model = textFileService.untitled.create({ untitledResource: existingData.uri, initialValue, mode: 'search-result' });
+		const model = textFileService.untitled.create({ untitledResource: existingData.uri, mode: 'search-result' });
 		input = instantiationService.createInstance(UntitledSearchEditorInput, model, getModel);
 	} else {
 		input = instantiationService.createInstance(FileSearchEditorInput, existingData.uri, getModel);
