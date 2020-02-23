@@ -266,7 +266,7 @@ export abstract class BaseFileEditorInput extends TextResourceEditorInput implem
 		return !!this.model;
 	}
 
-	move(group: GroupIdentifier, target: URI): IMoveResult {
+	move(group: GroupIdentifier, target: URI): IMoveResult | undefined {
 		return {
 			editor: {
 				resource: target,

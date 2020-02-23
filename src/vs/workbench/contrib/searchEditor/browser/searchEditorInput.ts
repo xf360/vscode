@@ -6,6 +6,7 @@
 import { Emitter, Event } from 'vs/base/common/event';
 import * as network from 'vs/base/common/network';
 import { basename } from 'vs/base/common/path';
+import { extname } from 'vs/base/common/resources';
 import { URI } from 'vs/base/common/uri';
 import 'vs/css!./media/searchEditor';
 import { Range } from 'vs/editor/common/core/range';
@@ -14,7 +15,7 @@ import { IModelService } from 'vs/editor/common/services/modelService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { localize } from 'vs/nls';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { GroupIdentifier, IEditorInput } from 'vs/workbench/common/editor';
+import { GroupIdentifier, IEditorInput, IMoveResult } from 'vs/workbench/common/editor';
 import { SearchEditorFindMatchClass } from 'vs/workbench/contrib/searchEditor/browser/constants';
 import { extractSearchQuery, serializeSearchConfiguration } from 'vs/workbench/contrib/searchEditor/browser/searchEditorSerialization';
 import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
@@ -242,6 +243,17 @@ export class FileSearchEditorInput extends BaseFileEditorInput {
 	async setMatchRanges(ranges: Range[]) {
 		this.oldDecorationsIDs = (await this.contentsModel).deltaDecorations(this.oldDecorationsIDs, ranges.map(range =>
 			({ range, options: { className: SearchEditorFindMatchClass, stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges } })));
+	}
+
+	move(group: GroupIdentifier, target: URI): IMoveResult | undefined {
+		if (extname(target) === SEARCH_EDITOR_EXT) {
+			return {
+				editor: this.instantiationService.invokeFunction(getOrMakeSearchEditorInput, { uri: target })
+			};
+		}
+
+		// Ignore move if editor was renamed to a different file extension
+		return undefined;
 	}
 
 	getTypeId(): string {
