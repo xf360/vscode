@@ -6,7 +6,7 @@
 import { Application, ProblemSeverity, Problems } from '../../../../automation';
 
 export function setup() {
-	describe('CSS', () => {
+	describe('Languages - CSS', () => {
 		it('verifies quick outline', async function () {
 			const app = this.app as Application;
 			await app.workbench.quickopen.openFile('style.css');
