@@ -112,7 +112,8 @@ server.on('error', err => {
  * @param {import('url').UrlWithParsedQuery} parsedUrl
  */
 function handleStatic(req, res, parsedUrl) {
-
+	// eslint-disable-next-line no-debugger
+	debugger;
 	// Strip `/static/` from the path
 	const relativeFilePath = path.normalize(decodeURIComponent(parsedUrl.pathname.substr('/static/'.length)));
 
@@ -125,7 +126,8 @@ function handleStatic(req, res, parsedUrl) {
  * @param {import('url').UrlWithParsedQuery} parsedUrl
  */
 function handleStaticExtension(req, res, parsedUrl) {
-
+	// eslint-disable-next-line no-debugger
+	debugger;
 	// Strip `/static-extension/` from the path
 	const relativeFilePath = path.normalize(decodeURIComponent(parsedUrl.pathname.substr('/static-extension/'.length)));
 
